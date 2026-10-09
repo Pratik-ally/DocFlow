@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 213 94% 47%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 213 94% 47%;
+    --radius: 0.625rem;
+  }
+
+  /* ── Dark theme — deep navy/charcoal healthcare SaaS ─────────────────── */
+  .dark {
+    --chart-grid: #1e293b;           /* dark chart grid lines */
+    --background: 222 47% 8%;        /* deep navy #0d1117-ish */
+    --foreground: 213 31% 91%;       /* near-white text */
+    --card: 220 39% 11%;             /* slightly lighter surface */
+    --card-foreground: 213 31% 91%;
+    --popover: 220 39% 11%;
+    --popover-foreground: 213 31% 91%;
+    --primary: 199 89% 48%;          /* teal/medical blue #0ea5e9 */
+    --primary-foreground: 222 47% 8%;
+    --secondary: 220 30% 16%;
+    --secondary-foreground: 213 31% 91%;
+    --muted: 220 30% 16%;
+    --muted-foreground: 215 20% 55%;
+    --accent: 220 30% 16%;
+    --accent-foreground: 213 31% 91%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 213 31% 91%;
+    --border: 220 25% 20%;
+    --input: 220 25% 20%;
+    --ring: 199 89% 48%;
+  }
+
+  /* Prevent color transitions on initial load (added by flash-prevention script) */
+  .no-transitions * {
+    transition: none !important;
+  }
+
+  /* Smooth theme transition */
+  * {
+    @apply border-border;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.1s ease;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+}
+
+@layer components {
+  .stat-card {
+    @apply bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md transition-shadow;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-foreground;
+  }
+
+  /* Priority badges — light */
+  .priority-HIGH {
+    @apply bg-red-100 text-red-700 border border-red-200;
+  }
+  .priority-SOON {
+    @apply bg-amber-100 text-amber-700 border border-amber-200;
+  }
+  .priority-ROUTINE {
+    @apply bg-green-100 text-green-700 border border-green-200;
+  }
+
+  /* Priority badges — dark */
+  .dark .priority-HIGH {
+    @apply bg-red-950/60 text-red-400 border-red-800/60;
+  }
+  .dark .priority-SOON {
+    @apply bg-amber-950/60 text-amber-400 border-amber-800/60;
+  }
+  .dark .priority-ROUTINE {
+    @apply bg-green-950/60 text-green-400 border-green-800/60;
+  }
+
+  /* Status badges — light */
+  .status-BOOKED        { @apply bg-blue-100 text-blue-700; }
+  .status-CONFIRMED     { @apply bg-indigo-100 text-indigo-700; }
+  .status-CHECKED_IN    { @apply bg-cyan-100 text-cyan-700; }
+  .status-WAITING       { @apply bg-amber-100 text-amber-700; }
+  .status-IN_CONSULTATION { @apply bg-purple-100 text-purple-700; }
+  .status-COMPLETED     { @apply bg-green-100 text-green-700; }
+  .status-CANCELLED     { @apply bg-gray-100 text-gray-500; }
+  .status-NO_SHOW       { @apply bg-red-100 text-red-500; }
+
+  /* Status badges — dark */
+  .dark .status-BOOKED        { @apply bg-blue-900/40 text-blue-400; }
+  .dark .status-CONFIRMED     { @apply bg-indigo-900/40 text-indigo-400; }
+  .dark .status-CHECKED_IN    { @apply bg-cyan-900/40 text-cyan-400; }
+  .dark .status-WAITING       { @apply bg-amber-900/40 text-amber-400; }
+  .dark .status-IN_CONSULTATION { @apply bg-purple-900/40 text-purple-400; }
+  .dark .status-COMPLETED     { @apply bg-green-900/40 text-green-400; }
+  .dark .status-CANCELLED     { @apply bg-slate-800 text-slate-400; }
+  .dark .status-NO_SHOW       { @apply bg-red-900/40 text-red-400; }
+}

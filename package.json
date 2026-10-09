@@ -1,0 +1,13 @@
+{
+  "name": "medipriority-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "cd frontend && node node_modules/next/dist/bin/next dev",
+    "dev:all": "node node_modules/.bin/concurrently --names \"API,WEB\" --prefix-colors \"cyan,magenta\" \"npm run dev:backend\" \"npm run dev:frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

@@ -1,0 +1,69 @@
+version: '3.9'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: medipriority-mongo
+    ports:
+      - '127.0.0.1:27017:27017'
+    volumes:
+      - mongo_data:/data/db
+      - ./docker/mongo-init.sh:/docker-entrypoint-initdb.d/01-create-app-user.sh:ro
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in the root .env file}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in the root .env file}
+      MONGO_INITDB_DATABASE: medipriority
+      MONGO_APP_USERNAME: ${MONGO_APP_USERNAME:?Set MONGO_APP_USERNAME in the root .env file}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Set MONGO_APP_PASSWORD in the root .env file}
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'mongosh --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 }).ok" --quiet',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: medipriority-backend
+    ports:
+      - '127.0.0.1:5000:5000'
+    environment:
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/medipriority?authSource=medipriority
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in the root .env file}
+      NODE_ENV: production
+      PORT: 5000
+      HOST: 0.0.0.0
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    command: sh -c "npm run build && node dist/server.js"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://backend:5000
+    container_name: medipriority-frontend
+    ports:
+      - '127.0.0.1:3000:3000'
+    environment:
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/medipriority?authSource=medipriority
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in the root .env file}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in the root .env file}
+      AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:-}
+      AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      SERVER_ACTIONS_ALLOWED_ORIGINS: ${SERVER_ACTIONS_ALLOWED_ORIGINS:-}
+      NEXT_PUBLIC_API_URL: http://backend:5000
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
