@@ -49,24 +49,24 @@ The seed script creates a fictional **MediCare General Hospital** with five depa
 
 The removed-doctor account is intentionally disabled and cannot sign in; use it to confirm removed-user access is rejected while past appointments remain in the demo data.
 
-| Role | Email | Portal URL | What to try |
+| Role | Email | Password  | What to try |
 |------|-------|------------|-------------|
-| OWNER | `owner@medicare-demo.example.com` | `/staff-login` | Invite an admin, remove an admin, and review the audit log. |
-| ADMIN | `admin1@medicare-demo.example.com` | `/staff-login` | Add a doctor and a staff member, remove a team member, and review their upcoming appointments for reassignment. |
-| ADMIN | `admin2@medicare-demo.example.com` | `/staff-login` | Explore team and appointment management. |
-| DOCTOR — General Medicine | `doctor.general@medicare-demo.example.com` | `/staff-login` | View the priority-sorted queue; start and complete a consultation. |
-| DOCTOR — Cardiology | `doctor.cardiology@medicare-demo.example.com` | `/staff-login` | Explore the doctor dashboard and appointments. |
-| DOCTOR — Orthopedics | `doctor.orthopedics@medicare-demo.example.com` | `/staff-login` | Explore the doctor dashboard and appointments. |
-| DOCTOR — Pediatrics | `doctor.pediatrics@medicare-demo.example.com` | `/staff-login` | Explore the doctor dashboard and appointments. |
-| DOCTOR — removed demo account | `doctor.removed@medicare-demo.example.com` | `/staff-login` | Compare removed-account access with retained past appointment history. |
-| STAFF — reception | `reception@medicare-demo.example.com` | `/staff-login` | Check in a patient, reorder the queue, and confirm priority. |
-| STAFF — nurse | `nurse@medicare-demo.example.com` | `/staff-login` | Explore the staff queue and patient workflows. |
-| PATIENT | `patient1@medicare-demo.example.com` | `/login` | Book an appointment, review its AI priority, track queue position, and cancel an appointment. |
-| PATIENT | `patient2@medicare-demo.example.com` | `/login` | Explore appointment and queue tracking. |
-| PATIENT | `patient3@medicare-demo.example.com` | `/login` | Explore appointment and queue tracking. |
-| PATIENT | `patient4@medicare-demo.example.com` | `/login` | Explore appointment and queue tracking. |
-| PATIENT | `patient5@medicare-demo.example.com` | `/login` | Explore appointment and queue tracking. |
-| PATIENT | `patient6@medicare-demo.example.com` | `/login` | Explore appointment and queue tracking. |
+| OWNER | `owner@medicare-demo.example.com` | `6a59f9dd69048d15a90f95362257c9abc0ba` | Invite an admin, remove an admin, and review the audit log. |
+| ADMIN | `admin1@medicare-demo.example.com` | `` | Add a doctor and a staff member, remove a team member, and review their upcoming appointments for reassignment. |
+| ADMIN | `admin2@medicare-demo.example.com` | `` | Explore team and appointment management. |
+| DOCTOR — General Medicine | `doctor.general@medicare-demo.example.com` | `` | View the priority-sorted queue; start and complete a consultation. |
+| DOCTOR — Cardiology | `doctor.cardiology@medicare-demo.example.com` | `` | Explore the doctor dashboard and appointments. |
+| DOCTOR — Orthopedics | `doctor.orthopedics@medicare-demo.example.com` | `` | Explore the doctor dashboard and appointments. |
+| DOCTOR — Pediatrics | `doctor.pediatrics@medicare-demo.example.com` | `` | Explore the doctor dashboard and appointments. |
+| DOCTOR — removed demo account | `doctor.removed@medicare-demo.example.com` | `` | Compare removed-account access with retained past appointment history. |
+| STAFF — reception | `reception@medicare-demo.example.com` | `` | Check in a patient, reorder the queue, and confirm priority. |
+| STAFF — nurse | `nurse@medicare-demo.example.com` | `` | Explore the staff queue and patient workflows. |
+| PATIENT | `patient1@medicare-demo.example.com` | `` | Book an appointment, review its AI priority, track queue position, and cancel an appointment. |
+| PATIENT | `patient2@medicare-demo.example.com` | `` | Explore appointment and queue tracking. |
+| PATIENT | `patient3@medicare-demo.example.com` | `` | Explore appointment and queue tracking. |
+| PATIENT | `patient4@medicare-demo.example.com` | `` | Explore appointment and queue tracking. |
+| PATIENT | `patient5@medicare-demo.example.com` | `` | Explore appointment and queue tracking. |
+| PATIENT | `patient6@medicare-demo.example.com` | `` | Explore appointment and queue tracking. |
 
 ### Walkthroughs
 
