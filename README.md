@@ -281,89 +281,123 @@ The deployment topology is described in [Vercel Deployment](#-vercel-deployment)
 
 ## 🌐 Vercel Deployment
 
-### Architecture on Vercel
+### Architecture
 
 ```
-        INTERNET
-            │
-            ▼
-          VERCEL
-            │
-   ┌────────┴────────┐
-   ▼                 ▼
-Next.js           API Routes
-Website         (/api/auth/*)
-   │                 │
-   └────────┬────────┘
-            ▼
-      Auth.js (v5)
-            │
-   ┌────────┴────────┐
-   ▼                 ▼
-Google OAuth      MongoDB Atlas
-(credentials)
+Browser
+  │
+  ├── Vercel: Next.js site + Auth.js routes
+  │       └── /backend-api/* rewrite ──────────┐
+  │                                            │ HTTPS
+  ├── Google OAuth (optional)                   ▼
+  │                                  Node host: Express API
+  │                                  (Railway, Render, etc.)
+  │                                            │
+  └────────────────────────────────────────────┤
+                                               ├── MongoDB Atlas
+                                               └── SMTP provider
 ```
 
-### Deploy steps
+Deploy the Next.js frontend and Express backend as separate services. The browser sends API requests to the frontend's same-origin `/backend-api/*` path, and Next.js forwards them to the public backend URL. Vercel does not run the Express backend from this repository.
 
-#### Step 1: Push to GitHub
+### Step-by-step deployment
 
-```bash
-# Commit changes in the existing repository
-git add .
-git commit -m "Update MediPriority"
-git push -u origin main
-```
+#### 1. Prepare GitHub
 
-#### Step 2: Import to Vercel
+Push the code you want to deploy to the GitHub branch you will use (normally `main`) and connect that repository to Vercel and your backend host. Never commit `.env`, `.env.local`, database credentials, OAuth secrets, or SMTP credentials. Enter production secrets only in the hosting providers' environment settings.
 
-1. Go to [vercel.com](https://vercel.com) → New Project
-2. Import your GitHub repository
-3. Set **Root Directory** to `frontend`
-4. Framework preset: **Next.js** (auto-detected)
-5. Click **Deploy**
+#### 2. Create MongoDB Atlas database
 
-#### Step 3: Add Vercel environment variables
+1. Create an Atlas project and cluster.
+2. Create a dedicated database user with a strong password and only the database access DocFlow needs.
+3. In Atlas **Network Access**, allow connections from the backend host's outbound IP addresses. If the host cannot provide stable egress IPs, use its private networking guidance; avoid `0.0.0.0/0` when possible.
+4. Copy the Atlas connection string, set the database name to `medipriority`, and replace the username/password placeholders. URL-encode special characters in the credentials.
+5. Keep the URI private. The backend and frontend both need it.
 
-In your Vercel project → **Settings → Environment Variables**, add:
+Atlas supports the replica-set transactions used for owner registration. A standalone local MongoDB server does not; use the Docker Compose replica set for local development.
+
+#### 3. Create the Vercel project and obtain its URL
+
+1. In [Vercel](https://vercel.com), select **Add New → Project** and import the GitHub repository.
+2. Set **Root Directory** to `frontend`. Keep the **Next.js** framework preset and default build command (`npm run build`).
+3. Deploy once to create the Vercel project and production domain, for example `https://your-app.vercel.app`. The site is not fully configured until the backend URL and production environment variables are added below.
+
+#### 4. Deploy the Express backend
+
+Create a Node.js web service on a host such as [Railway](https://railway.app) or [Render](https://render.com), connected to the same GitHub repository. Configure it as follows:
+
+| Setting | Value |
+|---------|-------|
+| Root / working directory | `backend` |
+| Build command | `npm install && npm run build` |
+| Start command | `npm start` |
+| Health-check path (if supported) | `/api/health` |
+
+Add these variables to the backend service's environment settings:
 
 | Variable | Value |
 |----------|-------|
-| `MONGODB_URI` | Your MongoDB Atlas connection string |
-| `AUTH_SECRET` | `openssl rand -hex 32` output |
-| `AUTH_GOOGLE_ID` | Your Google OAuth Client ID |
-| `AUTH_GOOGLE_SECRET` | Your Google OAuth Client Secret |
-| `NEXTAUTH_URL` | `https://YOUR-APP.vercel.app` |
-| `SESSION_SECRET` | Must exactly match the backend `SESSION_SECRET` and contain at least 32 characters in production |
-| `NEXT_PUBLIC_API_URL` | URL of your deployed Express backend (if separate) |
+| `NODE_ENV` | `production` |
+| `HOST` | `0.0.0.0` |
+| `PORT` | Use the port supplied by the hosting platform; it should set `PORT` automatically. |
+| `MONGODB_URI` | Private Atlas URI from step 2, including the `medipriority` database. |
+| `SESSION_SECRET` | A unique random secret at least 32 characters long. You will enter the exact same value in Vercel. |
+| `FRONTEND_URL` | Exact Vercel production origin, such as `https://your-app.vercel.app`, with no trailing slash. |
+| `SMTP_HOST` | Hostname supplied by your SMTP provider. Required for the backend to start in production. |
+| `SMTP_PORT` | SMTP port supplied by your provider (commonly `587`). |
+| `SMTP_USER` | SMTP username supplied by your provider. |
+| `SMTP_PASSWORD` | SMTP password or API credential supplied by your provider. |
+| `SMTP_FROM` | Verified sender address, for example `DocFlow <noreply@your-domain.example>`. Required for the backend to start in production. |
 
-#### Step 4: Update Google OAuth redirect URI
+SMTP is needed to deliver owner email-verification codes. Verify the sender/domain with your provider. Keep SMTP values on the backend only; never expose them through `NEXT_PUBLIC_*` variables.
 
-After getting your Vercel URL, add to Google Cloud Console:
+Wait for the backend host to report the service healthy. Check `https://YOUR-BACKEND-HOST/api/health` and confirm it returns a successful health response. Copy the backend's public base URL (origin only, with no `/api` suffix or trailing slash) for the next step.
 
-```
-https://YOUR-APP.vercel.app/api/auth/callback/google
-```
+#### 5. Configure Vercel production environment variables
 
-#### Step 5: Redeploy
+In Vercel, open **Project → Settings → Environment Variables** and add these for the **Production** environment:
 
-Trigger a redeploy from Vercel dashboard after updating environment variables.
+| Variable | Value |
+|----------|-------|
+| `MONGODB_URI` | The same private Atlas URI used by the backend. |
+| `SESSION_SECRET` | Exactly the same value as the backend's `SESSION_SECRET`. |
+| `AUTH_SECRET` | A separate random secret for Auth.js. Do not reuse `SESSION_SECRET`. |
+| `NEXTAUTH_URL` | Exact production site URL, such as `https://your-app.vercel.app`. |
+| `NEXT_PUBLIC_API_URL` | Backend public base URL from step 4, such as `https://your-backend.example.com`, with no trailing slash. This value is used when Next.js builds. |
 
----
-
-### Express Backend on Vercel (optional)
-
-The Express backend can be deployed separately (Railway, Render, Fly.io) or as a Vercel serverless function.
-
-For a simple setup, put the backend on [Railway](https://railway.app):
+Generate each secret independently on your computer with Node.js:
 
 ```bash
-cd backend
-railway init
-railway up
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Then set `NEXT_PUBLIC_API_URL` in Vercel to your Railway URL.
+Run the command separately for `SESSION_SECRET` and `AUTH_SECRET`. Do not commit or share the generated values.
+
+`AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are needed only if you enable Google sign-in; configure them in step 6. `SERVER_ACTIONS_ALLOWED_ORIGINS` is normally unnecessary for a direct Vercel deployment; only set it when a trusted reverse proxy requires additional origins.
+
+If you use Vercel Preview deployments, configure separate test credentials and a separate test database in the **Preview** scope. Do not connect previews to production data by default.
+
+#### 6. Configure Google sign-in (optional)
+
+1. In [Google Cloud Console](https://console.cloud.google.com/), configure the OAuth consent screen. Add test users if the application remains in testing mode.
+2. Create an OAuth client with application type **Web application**.
+3. Add the Vercel production origin to **Authorized JavaScript origins**:
+   `https://your-app.vercel.app`
+4. Add this exact URL to **Authorized redirect URIs**:
+   `https://your-app.vercel.app/api/auth/callback/google`
+5. Add `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` to Vercel's **Production** environment, then redeploy.
+
+For a custom domain, add it to Vercel first. Then use that same domain consistently in `NEXTAUTH_URL`, `FRONTEND_URL`, the Google authorized JavaScript origin, and the Google callback URI.
+
+#### 7. Redeploy and verify
+
+1. Redeploy the production branch in Vercel so the configured values—especially `NEXT_PUBLIC_API_URL`—are applied during the build.
+2. Open the Vercel site and check that the login and registration pages load.
+3. Check `https://YOUR-VERCEL-DOMAIN/backend-api/health`. The Next.js proxy should return the backend health response. Also check `https://YOUR-BACKEND-HOST/api/health` directly.
+4. Test owner registration and email verification, then sign in and try a basic hospital workflow. Review Vercel and backend logs if something fails; do not share logs containing credentials or verification codes.
+5. Confirm Atlas accepts connections only from the intended backend and that production secrets are stored only in provider settings.
+
+For an existing production database, back it up and follow the migration instructions in the local setup section before deploying schema changes. Do not run the demo seed script against production; it is intended for local demo data only.
 
 ---
 
