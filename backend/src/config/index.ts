@@ -21,7 +21,7 @@ if (nodeEnv === 'production' && (!process.env.SMTP_HOST || !process.env.SMTP_FRO
 
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
-  host: process.env.HOST || '127.0.0.1',
+  host: process.env.HOST || (nodeEnv === 'production' ? '0.0.0.0' : '127.0.0.1'),
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/medipriority',
   jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
