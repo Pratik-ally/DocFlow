@@ -7,6 +7,7 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const nodeEnv = process.env.NODE_ENV || 'development';
 const jwtSecret = process.env.SESSION_SECRET || process.env.JWT_SECRET || '';
+const isRender = Boolean(process.env.RENDER_SERVICE_ID);
 
 if (
   jwtSecret.length < 32 ||
@@ -21,7 +22,9 @@ if (nodeEnv === 'production' && (!process.env.SMTP_HOST || !process.env.SMTP_FRO
 
 export const config = {
   port: parseInt(process.env.PORT || '5000', 10),
-  host: process.env.HOST || (nodeEnv === 'production' ? '0.0.0.0' : '127.0.0.1'),
+  host: isRender || nodeEnv === 'production'
+    ? '0.0.0.0'
+    : process.env.HOST || '127.0.0.1',
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/medipriority',
   jwtSecret,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
