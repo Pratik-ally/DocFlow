@@ -6,7 +6,7 @@ const router = Router();
 
 router.get('/sse', authenticate, queue.queueSSE);
 router.get('/my', authenticate, authorize('PATIENT'), queue.getMyQueuePosition);
-router.get('/', authenticate, authorize('STAFF', 'DOCTOR', 'ADMIN'), queue.getQueue);
-router.patch('/:id', authenticate, authorize('STAFF', 'DOCTOR', 'ADMIN'), queue.updateQueueEntry);
+router.get('/', authenticate, authorize('OWNER', 'STAFF', 'DOCTOR', 'ADMIN'), queue.getQueue);
+router.patch('/:id', authenticate, authorize('OWNER', 'STAFF', 'DOCTOR', 'ADMIN'), queue.updateQueueEntry);
 
 export default router;

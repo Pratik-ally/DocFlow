@@ -9,8 +9,8 @@ router.get('/my', authenticate, authorize('PATIENT'), appt.getMyAppointments);
 router.post('/', authenticate, authorize('PATIENT'), appt.createAppointment);
 
 // Staff / Doctor / Admin routes
-router.get('/', authenticate, authorize('STAFF', 'DOCTOR', 'ADMIN'), appt.getAllAppointments);
+router.get('/', authenticate, authorize('OWNER', 'STAFF', 'DOCTOR', 'ADMIN'), appt.getAllAppointments);
 router.get('/:id', authenticate, appt.getAppointmentById);
-router.patch('/:id/status', authenticate, authorize('PATIENT', 'STAFF', 'DOCTOR', 'ADMIN'), appt.updateAppointmentStatus);
+router.patch('/:id/status', authenticate, authorize('PATIENT', 'OWNER', 'STAFF', 'DOCTOR', 'ADMIN'), appt.updateAppointmentStatus);
 
 export default router;

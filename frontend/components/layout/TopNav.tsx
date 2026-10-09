@@ -1,16 +1,26 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, LogOut } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { notificationApi } from '@/services/api';
+import { notificationApi, authApi } from '@/services/api';
 import { Notification } from '@/types';
+import type { Hospital } from '@/types';
 import { timeAgo } from '@/lib/utils';
-import { ThemeToggleDropdown } from '@/components/ui/ThemeToggle';
 
 export default function TopNav({ title }: { title?: string }) {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, logout } = useAuth();
   const [notifs, setNotifs] = useState<Notification[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [hospitalName, setHospitalName] = useState<string>('');
+
+  useEffect(() => {
+    authApi.getHospitalPublic()
+      .then((r) => {
+        const h = r.data.hospital as Hospital | null;
+        if (h?.name) setHospitalName(h.name);
+      })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -38,15 +48,23 @@ export default function TopNav({ title }: { title?: string }) {
     setNotifs((prev) => prev.map((n) => n._id === id ? { ...n, read: true } : n));
   };
 
+  const roleLabel: Record<string, string> = {
+    OWNER: 'Owner',
+    ADMIN: 'Admin',
+    DOCTOR: 'Doctor',
+    STAFF: 'Staff',
+    PATIENT: 'Patient',
+  };
+
   return (
     <header className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-sm dark:shadow-slate-900/50">
-      <div>
+      <div className="flex flex-col">
+        {hospitalName && (
+          <span className="text-xs text-gray-400 dark:text-slate-500 font-medium">{hospitalName}</span>
+        )}
         {title && <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h1>}
       </div>
       <div className="flex items-center gap-2">
-        {/* Theme toggle */}
-        <ThemeToggleDropdown />
-
         {/* Notifications */}
         <div className="relative">
           <button
@@ -102,16 +120,25 @@ export default function TopNav({ title }: { title?: string }) {
           )}
         </div>
 
-        {/* User avatar */}
+        {/* User info + Logout */}
         {user && (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs font-semibold">{user.name[0].toUpperCase()}</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-teal-500 flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-xs font-semibold">{user.name[0].toUpperCase()}</span>
+              </div>
+              <div className="hidden sm:block">
+                <div className="text-sm font-medium text-gray-800 dark:text-slate-200">{user.name}</div>
+                <div className="text-xs text-gray-400 dark:text-slate-500">{roleLabel[user.role] ?? user.role}</div>
+              </div>
             </div>
-            <div className="hidden sm:block">
-              <div className="text-sm font-medium text-gray-800 dark:text-slate-200">{user.name}</div>
-              <div className="text-xs text-gray-400 dark:text-slate-500">{user.role}</div>
-            </div>
+            <button
+              onClick={logout}
+              title="Sign out"
+              className="p-2 rounded-lg text-gray-400 dark:text-slate-500 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+            >
+              <LogOut size={18} />
+            </button>
           </div>
         )}
       </div>

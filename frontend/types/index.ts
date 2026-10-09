@@ -1,4 +1,5 @@
-export type UserRole = 'PATIENT' | 'DOCTOR' | 'STAFF' | 'ADMIN';
+export type UserRole = 'PATIENT' | 'DOCTOR' | 'STAFF' | 'ADMIN' | 'OWNER';
+export type StaffStatus = 'ACTIVE' | 'REMOVED';
 export type AppointmentPriority = 'ROUTINE' | 'SOON' | 'HIGH';
 export type AppointmentStatus =
   | 'BOOKED'
@@ -16,8 +17,26 @@ export interface User {
   email: string;
   phone?: string;
   role: UserRole;
+  hospitalId?: string;
+  status?: StaffStatus;
+  mustChangePassword?: boolean;
   isActive?: boolean;
   createdAt?: string;
+}
+
+export interface StaffMember {
+  _id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  department?: string;
+  specialization?: string;
+  status: StaffStatus;
+  lastLoginAt?: string;
+  removedAt?: string;
+  createdAt: string;
+  hospitalId?: string;
+  mustChangePassword?: boolean;
 }
 
 export interface Doctor {
@@ -43,6 +62,7 @@ export interface Department {
 export interface Hospital {
   _id: string;
   name: string;
+  logoUrl?: string;
   address: {
     street: string;
     city: string;
@@ -76,6 +96,7 @@ export interface Appointment {
   reason: string;
   symptoms: string[];
   priority: AppointmentPriority;
+  requiresHumanReview: boolean;
   status: AppointmentStatus;
   notes?: string;
   followUpRequired?: boolean;
@@ -138,4 +159,13 @@ export interface DashboardStats {
   totalPatients: number;
   noShowRate: number;
   avgWait: number;
+}
+
+export interface AuditLogEntry {
+  _id: string;
+  action: string;
+  targetId?: string;
+  ipAddress?: string;
+  at: string;
+  actorId?: { name: string; email: string; role: string } | null;
 }

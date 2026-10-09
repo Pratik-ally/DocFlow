@@ -110,23 +110,23 @@ export default function LandingPage() {
               Book Appointment <ArrowRight size={16} />
             </Link>
             <Link
-              href="/login?role=patient"
+              href="/login"
               className="inline-flex items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-semibold px-7 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
             >
               Patient Login
             </Link>
             <Link
-              href="/login?role=staff"
+              href="/staff-login"
               className="inline-flex items-center gap-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-semibold px-7 py-3.5 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
             >
-              Hospital Login
+              Staff Login
             </Link>
           </div>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto mt-16 pt-12 border-t border-gray-100 dark:border-slate-800">
             {[
-              { value: '30+', label: 'Demo Appointments' },
+              { value: '30+', label: 'Appointments' },
               { value: '5', label: 'Departments' },
               { value: '8+', label: 'Specialist Doctors' },
             ].map((s) => (
@@ -194,10 +194,10 @@ export default function LandingPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {[
-              { role: 'Patient', icon: '👤', desc: 'Book appointments, track queue, view status', color: 'bg-blue-50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-800/40', href: '/login?role=patient' },
-              { role: 'Doctor', icon: '👨‍⚕️', desc: "Manage today's schedule, patient records, consultations", color: 'bg-teal-50 dark:bg-teal-950/40 border-teal-100 dark:border-teal-800/40', href: '/login?role=doctor' },
-              { role: 'Staff', icon: '🏥', desc: 'Manage queue, confirm priorities, track wait times', color: 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-100 dark:border-indigo-800/40', href: '/login?role=staff' },
-              { role: 'Admin', icon: '⚙️', desc: 'Analytics, user management, system configuration', color: 'bg-purple-50 dark:bg-purple-950/40 border-purple-100 dark:border-purple-800/40', href: '/login?role=admin' },
+              { role: 'Patient', icon: '👤', desc: 'Book appointments, track queue, view status', color: 'bg-blue-50 dark:bg-blue-950/40 border-blue-100 dark:border-blue-800/40', href: '/login' },
+              { role: 'Doctor', icon: '👨‍⚕️', desc: "Manage today's schedule, patient records, consultations", color: 'bg-teal-50 dark:bg-teal-950/40 border-teal-100 dark:border-teal-800/40', href: '/staff-login' },
+              { role: 'Staff', icon: '🏥', desc: 'Manage queue, confirm priorities, track wait times', color: 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-100 dark:border-indigo-800/40', href: '/staff-login' },
+              { role: 'Admin', icon: '⚙️', desc: 'Analytics, user management, system configuration', color: 'bg-purple-50 dark:bg-purple-950/40 border-purple-100 dark:border-purple-800/40', href: '/staff-login' },
             ].map((r) => (
               <Link key={r.role} href={r.href} className={`block p-6 rounded-2xl border ${r.color} hover:shadow-sm transition-all group`}>
                 <div className="text-2xl mb-3">{r.icon}</div>
@@ -228,14 +228,14 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-20 bg-gradient-to-br from-blue-600 to-teal-600">
         <div className="max-w-3xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-3">Ready to see it in action?</h2>
-          <p className="text-blue-100 mb-8">Use the demo accounts to explore all portals immediately.</p>
+          <h2 className="text-3xl font-bold text-white mb-3">Get started today</h2>
+          <p className="text-blue-100 mb-8">Book your appointment or sign in to your portal.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/login" className="bg-white text-blue-700 font-semibold px-7 py-3 rounded-xl hover:bg-blue-50 transition-colors">
-              Access Demo
+            <Link href="/register" className="bg-white text-blue-700 font-semibold px-7 py-3 rounded-xl hover:bg-blue-50 transition-colors">
+              Register as Patient
             </Link>
-            <Link href="/technology" className="border border-white/40 text-white font-semibold px-7 py-3 rounded-xl hover:bg-white/10 transition-colors">
-              Platform Capabilities
+            <Link href="/staff-login" className="border border-white/40 text-white font-semibold px-7 py-3 rounded-xl hover:bg-white/10 transition-colors">
+              Staff Sign In
             </Link>
           </div>
         </div>
@@ -245,7 +245,7 @@ export default function LandingPage() {
       <footer className="bg-white dark:bg-slate-950 border-t border-gray-100 dark:border-slate-800 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <DocFlowLogo size={24} textSize="text-sm" />
-          <p className="text-xs text-gray-400 dark:text-slate-500">© {new Date().getFullYear()} DocFlow — Demo Healthcare Platform. Not for clinical use.</p>
+          <p className="text-xs text-gray-400 dark:text-slate-500">© {new Date().getFullYear()} DocFlow</p>
           <div className="flex items-center gap-4">
             <Link href="/technology" className="text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">Platform</Link>
             <Link href="/login" className="text-xs text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">Sign In</Link>

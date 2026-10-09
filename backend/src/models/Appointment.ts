@@ -23,6 +23,7 @@ export interface IAppointment extends Document {
   reason: string;
   symptoms: string[];
   priority: AppointmentPriority;
+  requiresHumanReview: boolean;
   status: AppointmentStatus;
   notes?: string;
   followUpRequired?: boolean;
@@ -43,6 +44,7 @@ const AppointmentSchema = new Schema<IAppointment>(
     reason: { type: String, required: true },
     symptoms: [{ type: String }],
     priority: { type: String, enum: ['ROUTINE', 'SOON', 'HIGH'], default: 'ROUTINE' },
+    requiresHumanReview: { type: Boolean, default: false, required: true },
     status: {
       type: String,
       enum: ['BOOKED', 'CONFIRMED', 'CHECKED_IN', 'WAITING', 'IN_CONSULTATION', 'COMPLETED', 'CANCELLED', 'NO_SHOW'],

@@ -204,7 +204,10 @@ export default function StaffAppointmentsPage() {
                           <td className="whitespace-nowrap px-3 py-3 text-gray-600 dark:text-slate-400">{doctorName}</td>
                           <td className="whitespace-nowrap px-3 py-3 text-gray-600 dark:text-slate-400">{formatDate(appointment.appointmentDate)}</td>
                           <td className="whitespace-nowrap px-3 py-3 text-gray-600 dark:text-slate-400">{appointment.appointmentTime}</td>
-                          <td className="max-w-[220px] truncate px-3 py-3 text-gray-600 dark:text-slate-400" title={appointment.reason}>{appointment.reason}</td>
+                          <td className="max-w-[220px] px-3 py-3 text-gray-600 dark:text-slate-400" title={appointment.reason}>
+                            <div className="truncate">{appointment.reason}</div>
+                            {appointment.requiresHumanReview && <div className="text-xs font-medium text-amber-700 dark:text-amber-400">Manual priority review</div>}
+                          </td>
                           <td className="px-3 py-3"><Badge priority={appointment.priority} /></td>
                           <td className="px-3 py-3"><Badge status={appointment.status} /></td>
                           <td className="px-3 py-3">

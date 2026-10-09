@@ -10,8 +10,7 @@ import { authApi } from '@/services/api';
 import { useAuth } from '@/lib/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input, Label, Select } from '@/components/ui/form';
-import { ThemeToggleDropdown } from '@/components/ui/ThemeToggle';
-import { DocFlowLogo } from '@/components/ui/DocFlowLogo';
+import type { Hospital } from '@/types';
 
 const schema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -40,10 +39,18 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [hospital, setHospital] = useState<Hospital | null>(null);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
+
+  // Fetch hospital name/logo for display
+  React.useEffect(() => {
+    authApi.getHospitalPublic()
+      .then((r) => { if (r.data.hospital) setHospital(r.data.hospital as Hospital); })
+      .catch(() => {});
+  }, []);
 
   const password = watch('password', '');
 
@@ -66,7 +73,7 @@ export default function RegisterPage() {
         gender: data.gender,
         password: data.password,
       });
-      await login(data.email, data.password);
+      await login(data.email, data.password, false, 'patient');
       setSuccess(true);
       setTimeout(() => router.push('/patient/dashboard'), 1500);
     } catch (err: unknown) {
@@ -90,42 +97,28 @@ export default function RegisterPage() {
     );
   }
 
+  const siteName = 'DocFlow';
+
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex">
-      {/* Left panel */}
-      <div className="hidden lg:flex lg:w-2/5 bg-gradient-to-br from-blue-600 to-teal-600 flex-col justify-between p-12">
-        <Link href="/"><DocFlowLogo size={32} variant="white" textSize="text-lg" /></Link>
-        <div>
-          <h2 className="text-3xl font-bold text-white leading-tight mb-4">Join as a patient today.</h2>
-          <p className="text-blue-100">Book appointments, track your queue position, and manage your healthcare journey.</p>
-          <ul className="mt-6 space-y-2">
-            {['AI-assisted priority assessment', 'Real-time queue updates', 'Appointment history', 'Secure health data storage'].map((item) => (
-              <li key={item} className="flex items-center gap-2 text-blue-100 text-sm">
-                <CheckCircle size={14} className="text-teal-300 flex-shrink-0" />
-                {item}
-              </li>
-            ))}
-          </ul>
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-md py-8">
+        {/* Hospital branding */}
+        <div className="text-center mb-8">
+          {hospital?.logoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={hospital.logoUrl} alt={siteName} className="h-14 mx-auto mb-3 object-contain" />
+          ) : (
+            <div className="w-14 h-14 rounded-full bg-gradient-to-br from-blue-600 to-teal-600 flex items-center justify-center mx-auto mb-3">
+              <span className="text-2xl font-bold text-white">{siteName[0]}</span>
+            </div>
+          )}
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{siteName}</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Patient Portal — New Account</p>
         </div>
-        <div className="text-white/60 text-xs">© {new Date().getFullYear()} DocFlow · Demo Platform</div>
-      </div>
 
-      {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center p-6 overflow-y-auto">
-        <div className="w-full max-w-md py-8">
-          {/* Mobile logo + theme toggle */}
-          <div className="flex lg:hidden items-center justify-between mb-8">
-            <Link href="/"><DocFlowLogo size={28} /></Link>
-            <ThemeToggleDropdown />
-          </div>
-          {/* Desktop theme toggle */}
-          <div className="hidden lg:flex justify-end mb-4">
-            <ThemeToggleDropdown />
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-8">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create patient account</h1>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800 shadow-sm p-8">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Create patient account</h1>
               <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">All fields are required</p>
             </div>
 
@@ -208,11 +201,10 @@ export default function RegisterPage() {
               </Button>
             </form>
 
-            <p className="text-center text-sm text-gray-500 dark:text-slate-400 mt-5">
-              Already have an account?{' '}
-              <Link href="/login" className="text-blue-600 dark:text-sky-400 font-medium hover:underline">Sign in</Link>
-            </p>
-          </div>
+          <p className="text-center text-sm text-gray-500 dark:text-slate-400 mt-5">
+            Already have an account?{' '}
+            <Link href="/login" className="text-blue-600 dark:text-sky-400 font-medium hover:underline">Sign in</Link>
+          </p>
         </div>
       </div>
     </div>

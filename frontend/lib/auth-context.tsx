@@ -7,7 +7,13 @@ import { authApi } from '@/services/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string, rememberMe?: boolean) => Promise<User>;
+  login: (
+    email: string,
+    password: string,
+    rememberMe?: boolean,
+    portal?: 'patient' | 'staff',
+    hospitalId?: string
+  ) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   bridgeError: string | null;
@@ -25,6 +31,12 @@ async function bridgeSession(): Promise<void> {
   if (!response.ok) {
     throw new Error(`Backend session bridge failed (${response.status})`);
   }
+}
+
+/** Returns the correct login page for a given role. */
+function loginPageForRole(role?: string): string {
+  if (!role) return '/login';
+  return ['OWNER', 'ADMIN', 'DOCTOR', 'STAFF'].includes(role) ? '/staff-login' : '/login';
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -52,13 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (status === 'authenticated' && session?.user) {
       const sessionUser = session.user as {
         id?: string; name?: string | null; email?: string | null;
-        image?: string | null; role?: string;
+        image?: string | null; role?: string; hospitalId?: string;
+        mustChangePassword?: boolean; portal?: string;
       };
       const mapped: User = {
         id: sessionUser.id ?? '',
         name: sessionUser.name ?? '',
         email: sessionUser.email ?? '',
         role: (sessionUser.role ?? 'PATIENT') as User['role'],
+        hospitalId: sessionUser.hospitalId,
+        mustChangePassword: sessionUser.mustChangePassword,
         isActive: true,
       };
       if (bridged) {
@@ -103,12 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = async () => {
     if (session?.user) {
-      const su = session.user as { id?: string; name?: string | null; email?: string | null; role?: string };
+      const su = session.user as {
+        id?: string; name?: string | null; email?: string | null;
+        role?: string; hospitalId?: string; mustChangePassword?: boolean;
+      };
       setUser({
         id: su.id ?? '',
         name: su.name ?? '',
         email: su.email ?? '',
         role: (su.role ?? 'PATIENT') as User['role'],
+        hospitalId: su.hospitalId,
+        mustChangePassword: su.mustChangePassword,
         isActive: true,
       });
     } else {
@@ -121,17 +141,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Establish the Auth.js session first so middleware accepts protected pages.
-  // Returns the user object so callers can route immediately without waiting for state.
-  const login = async (email: string, password: string, _rememberMe = false): Promise<User> => {
-    const result = await nextAuthSignIn('credentials', { email, password, redirect: false });
+  /**
+   * Signs in via the correct Auth.js provider based on portal.
+   * Returns the user object so callers can route immediately.
+   */
+  const login = async (
+    email: string,
+    password: string,
+    _rememberMe = false,
+    portal: 'patient' | 'staff' = 'patient',
+    hospitalId?: string
+  ): Promise<User> => {
+    if (portal === 'staff') {
+      await authApi.staffLogin({ email, password, ...(hospitalId && { hospitalId }) });
+    }
+    const providerId = portal === 'staff' ? 'staff-credentials' : 'patient-credentials';
+    let result;
+    try {
+      result = await nextAuthSignIn(providerId, {
+        email,
+        password,
+        ...(portal === 'staff' && hospitalId ? { hospitalId } : {}),
+        redirect: false,
+      });
+    } catch {
+      if (portal === 'staff') {
+        await authApi.staffLogout().catch(() => {});
+        await nextAuthSignOut({ redirect: false }).catch(() => {});
+      }
+      throw new Error('Invalid credentials');
+    }
     if (!result || result.error) {
-      throw new Error('Invalid email or password');
+      if (portal === 'staff') {
+        await authApi.staffLogout().catch(() => {});
+      }
+      throw new Error('Invalid credentials');
     }
 
     const refreshedSession = await update();
     const sessionUser = refreshedSession?.user as {
-      id?: string; name?: string | null; email?: string | null; role?: string;
+      id?: string; name?: string | null; email?: string | null;
+      role?: string; hospitalId?: string; mustChangePassword?: boolean; portal?: string;
     } | undefined;
     if (!sessionUser?.id || !sessionUser.email) {
       throw new Error('Could not load the signed-in user session');
@@ -142,6 +192,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: sessionUser.name ?? '',
       email: sessionUser.email,
       role: (sessionUser.role ?? 'PATIENT') as User['role'],
+      hospitalId: sessionUser.hospitalId,
+      mustChangePassword: sessionUser.mustChangePassword,
       isActive: true,
     };
     await ensureSessionBridge();
@@ -153,12 +205,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
-    await authApi.logout().catch(() => {});
+    const currentRole = user?.role;
+    const loginPage = loginPageForRole(currentRole);
+    if (currentRole && currentRole !== 'PATIENT') {
+      await authApi.staffLogout().catch(() => {});
+    } else {
+      await authApi.logout().catch(() => {});
+    }
     await nextAuthSignOut({ redirect: false });
     setUser(null);
     setBridged(false);
     setBridgeError(null);
-    window.location.href = '/login';
+    window.location.href = loginPage;
   };
 
   return (

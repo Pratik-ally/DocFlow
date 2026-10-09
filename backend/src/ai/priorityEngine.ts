@@ -129,3 +129,19 @@ export function assessPriority(input: PriorityInput): PriorityResult {
     requiresHumanReview,
   };
 }
+
+export function assessPriorityForBooking(
+  input: PriorityInput,
+  assessor: (value: PriorityInput) => PriorityResult = assessPriority
+): Pick<PriorityResult, 'priority' | 'requiresHumanReview'> {
+  try {
+    const result = assessor(input);
+    return {
+      priority: result.priority,
+      requiresHumanReview: result.requiresHumanReview,
+    };
+  } catch (error) {
+    console.error('Priority assessment failed; manual review required:', error instanceof Error ? error.name : 'Unknown error');
+    return { priority: 'ROUTINE', requiresHumanReview: true };
+  }
+}

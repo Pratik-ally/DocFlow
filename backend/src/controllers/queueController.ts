@@ -5,16 +5,24 @@ import { Patient } from '../models/Patient';
 import { Doctor } from '../models/Doctor';
 import { AuthRequest } from '../middleware/auth';
 
-// SSE clients map: doctorId/departmentId -> set of res objects
+// SSE clients are isolated by hospital.
 const sseClients: Map<string, Set<Response>> = new Map();
 
 export const getQueue = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { doctorId, departmentId, date } = req.query;
-    const filter: Record<string, unknown> = { status: { $in: ['WAITING', 'IN_CONSULTATION'] } };
+    const hospitalId = req.user?.hospitalId;
+    if (!hospitalId) {
+      res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      return;
+    }
+    const filter: Record<string, unknown> = {
+      hospitalId,
+      status: { $in: ['WAITING', 'IN_CONSULTATION'] },
+    };
 
     if (req.user?.role === 'DOCTOR') {
-      const doctor = await Doctor.findOne({ userId: req.user.id }).select('_id');
+      const doctor = await Doctor.findOne({ userId: req.user.id, hospitalId }).select('_id');
       if (!doctor) {
         res.status(404).json({ success: false, message: 'Doctor profile not found' });
         return;
@@ -94,6 +102,7 @@ export const getMyQueuePosition = async (req: AuthRequest, res: Response): Promi
     // Count patients ahead
     const patientsAhead = await QueueEntry.countDocuments({
       doctorId: entry.doctorId,
+      hospitalId: entry.hospitalId,
       date: { $gte: today, $lt: tomorrow },
       queuePosition: { $lt: entry.queuePosition },
       status: { $in: ['WAITING', 'IN_CONSULTATION'] },
@@ -117,21 +126,26 @@ export const updateQueueEntry = async (req: AuthRequest, res: Response): Promise
       return;
     }
 
-    const currentEntry = await QueueEntry.findById(req.params.id).select('doctorId');
+    const hospitalId = req.user?.hospitalId;
+    if (!hospitalId) {
+      res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      return;
+    }
+    const currentEntry = await QueueEntry.findOne({ _id: req.params.id, hospitalId }).select('doctorId');
     if (!currentEntry) {
       res.status(404).json({ success: false, message: 'Queue entry not found' });
       return;
     }
     if (req.user?.role === 'DOCTOR') {
-      const doctor = await Doctor.findOne({ userId: req.user.id }).select('_id');
+      const doctor = await Doctor.findOne({ userId: req.user.id, hospitalId }).select('_id');
       if (!doctor || currentEntry.doctorId.toString() !== doctor._id.toString()) {
         res.status(403).json({ success: false, message: 'Not authorised to update this queue entry' });
         return;
       }
     }
 
-    const entry = await QueueEntry.findByIdAndUpdate(
-      req.params.id,
+    const entry = await QueueEntry.findOneAndUpdate(
+      { _id: req.params.id, hospitalId },
       {
         ...(status && { status }),
         ...(queuePosition !== undefined && { queuePosition }),
@@ -150,7 +164,7 @@ export const updateQueueEntry = async (req: AuthRequest, res: Response): Promise
     }
 
     // Broadcast SSE update
-    broadcastQueueUpdate(entry.doctorId?.toString() || '');
+    broadcastQueueUpdate(hospitalId);
 
     res.json({ success: true, entry });
   } catch {
@@ -165,7 +179,7 @@ export const queueSSE = (req: AuthRequest, res: Response): void => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
-  const channel = req.query.channel as string || 'global';
+  const channel = req.user?.hospitalId ?? req.user?.id ?? 'anonymous';
 
   if (!sseClients.has(channel)) {
     sseClients.set(channel, new Set());
@@ -190,14 +204,6 @@ function broadcastQueueUpdate(channel: string): void {
   if (clients) {
     const message = JSON.stringify({ type: 'queue_update', timestamp: new Date().toISOString() });
     clients.forEach((client) => {
-      client.write(`data: ${message}\n\n`);
-    });
-  }
-  // Also broadcast to global channel
-  const globalClients = sseClients.get('global');
-  if (globalClients) {
-    const message = JSON.stringify({ type: 'queue_update', timestamp: new Date().toISOString() });
-    globalClients.forEach((client) => {
       client.write(`data: ${message}\n\n`);
     });
   }

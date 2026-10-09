@@ -9,23 +9,65 @@ export interface AuthRequest extends Request {
     email: string;
     role: UserRole;
     name: string;
+    hospitalId?: string;
+    portal?: string;
   };
 }
 
-export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
-  try {
-    const token = req.cookies?.token || req.headers.authorization?.split(' ')[1];
+interface JwtPayload {
+  id: string;
+  sessionVersion: number;
+  hospitalId?: string;
+  portal?: string;
+}
 
-    if (!token) {
-      res.status(401).json({ success: false, message: 'Authentication required' });
+/**
+ * Reads the JWT from:
+ *   - `staff_token` cookie  (staff portal)
+ *   - `token` cookie        (patient portal)
+ *   - Authorization header  (API clients)
+ *
+ * Then ALWAYS re-reads the user from the database to get the live status.
+ * A removed user with a valid token is rejected here.
+ */
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+  const token =
+    req.cookies?.staff_token ||
+    req.cookies?.token ||
+    req.headers.authorization?.split(' ')[1];
+
+  if (!token) {
+    res.status(401).json({ success: false, message: 'Authentication required' });
+    return;
+  }
+
+  let decoded: JwtPayload;
+  try {
+    decoded = jwt.verify(token, config.jwtSecret) as JwtPayload;
+  } catch {
+    res.status(401).json({ success: false, message: 'Invalid or expired token' });
+    return;
+  }
+
+  try {
+    const user = await User.findById(decoded.id).select(
+      'name email role status hospitalId mustChangePassword sessionVersion'
+    );
+    if (!user) {
+      res.status(401).json({ success: false, message: 'Invalid or expired token' });
       return;
     }
 
-    const decoded = jwt.verify(token, config.jwtSecret) as { id: string };
-
-    const user = await User.findById(decoded.id).select('-passwordHash');
-    if (!user || !user.isActive) {
-      res.status(401).json({ success: false, message: 'User not found or inactive' });
+    const databaseHospitalId = user.hospitalId?.toString();
+    if (
+      user.status !== 'ACTIVE' ||
+      !Number.isSafeInteger(decoded.sessionVersion) ||
+      decoded.sessionVersion !== user.sessionVersion ||
+      (decoded.hospitalId ?? '') !== (databaseHospitalId ?? '') ||
+      (user.role === 'PATIENT' ? decoded.portal !== 'patient' : decoded.portal !== 'staff') ||
+      (user.role !== 'PATIENT' && !databaseHospitalId)
+    ) {
+      res.status(401).json({ success: false, message: 'Invalid or expired token' });
       return;
     }
 
@@ -34,10 +76,12 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
       email: user.email,
       role: user.role,
       name: user.name,
+      hospitalId: user.hospitalId?.toString(),
+      portal: decoded.portal,
     };
     next();
-  } catch {
-    res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  } catch (error) {
+    next(error);
   }
 };
 

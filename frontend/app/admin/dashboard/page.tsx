@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { adminApi, getApiErrorMessage } from '@/services/api';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import OwnerOnboardingChecklist from '@/components/admin/OwnerOnboardingChecklist';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DashboardStats } from '@/types';
 import {
@@ -84,6 +85,7 @@ export default function AdminDashboard() {
   return (
     <DashboardLayout title="Analytics Dashboard">
       <div className="space-y-6">
+        {user?.role === 'OWNER' && <OwnerOnboardingChecklist />}
         {error && (
           <div role="alert" className="flex items-center justify-between gap-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">
             <span>{error}</span>

@@ -8,6 +8,7 @@ export interface IQueueEntry extends Document {
   patientId: mongoose.Types.ObjectId;
   doctorId: mongoose.Types.ObjectId;
   departmentId: mongoose.Types.ObjectId;
+  hospitalId: mongoose.Types.ObjectId;
   priority: 'ROUTINE' | 'SOON' | 'HIGH';
   queuePosition: number;
   estimatedWaitTime: number;
@@ -26,6 +27,7 @@ const QueueEntrySchema = new Schema<IQueueEntry>(
     patientId: { type: Schema.Types.ObjectId, ref: 'Patient', required: true },
     doctorId: { type: Schema.Types.ObjectId, ref: 'Doctor', required: true },
     departmentId: { type: Schema.Types.ObjectId, ref: 'Department', required: true },
+    hospitalId: { type: Schema.Types.ObjectId, ref: 'Hospital', required: true },
     priority: { type: String, enum: ['ROUTINE', 'SOON', 'HIGH'], default: 'ROUTINE' },
     queuePosition: { type: Number, required: true },
     estimatedWaitTime: { type: Number, default: 0 },

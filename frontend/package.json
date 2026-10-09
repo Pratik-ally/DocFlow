@@ -44,20 +44,24 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20.10.6",
     "@types/react": "^18.2.46",
     "@types/react-dom": "^18.2.18",
-    "autoprefixer": "^10.4.17",
     "eslint": "^8.57.1",
-    "eslint-config-next": "^15.5.24",
+    "eslint-config-next": "^14.2.35",
     "postcss": "^8.5.29",
-    "tailwindcss": "^3.4.1",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.3.3"
   },
   "overrides": {
     "postcss": "$postcss",
-    "braces": "^3.0.3"
+    "eslint-config-next": {
+      "@next/eslint-plugin-next": {
+        "glob": "^10.5.0"
+      }
+    }
   }
 }

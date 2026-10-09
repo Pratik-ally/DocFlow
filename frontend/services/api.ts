@@ -1,4 +1,5 @@
 import axios, { AxiosError } from 'axios';
+import type { ValidHospitalRegistration } from '@shared/hospitalRegistration';
 
 // Use a same-origin proxy so the browser can reliably send the backend auth cookie.
 const API_BASE = '/backend-api';
@@ -70,7 +71,7 @@ api.interceptors.response.use(
   async (error: AxiosError) => {
     const request = error.config;
     const isPublicAuthRequest = request?.url
-      ? /^\/auth\/(login|register|forgot-password|reset-password)(?:\/|$)/.test(request.url)
+      ? /^\/(auth\/(login|register|forgot-password|reset-password)|staff\/login)(?:\/|$)/.test(request.url)
       : false;
 
     if (
@@ -92,10 +93,14 @@ api.interceptors.response.use(
 export const authApi = {
   register: (data: Record<string, unknown>) => api.post('/auth/register', data),
   login: (data: Record<string, unknown>) => api.post('/auth/login', data),
+  staffLogin: (data: Record<string, unknown>) => api.post('/staff/login', data),
   logout: () => api.post('/auth/logout'),
+  staffLogout: () => api.post('/staff/logout'),
   me: () => api.get('/auth/me'),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   resetPassword: (data: Record<string, unknown>) => api.post('/auth/reset-password', data),
+  changePassword: (data: Record<string, unknown>) => api.post('/auth/change-password', data),
+  getHospitalPublic: () => api.get('/hospital'),
 };
 
 // Appointments
@@ -118,10 +123,19 @@ export const queueApi = {
 // Hospital/data
 export const hospitalApi = {
   getHospitals: () => api.get('/hospitals'),
+  getManageSettings: () => api.get('/hospital/manage'),
+  updateSettings: (data: Record<string, unknown>) => api.patch('/hospital', data),
+  createDepartment: (data: { name: string; description: string }) => api.post('/departments', data),
   getDepartments: (hospitalId?: string) =>
     api.get('/departments', { params: hospitalId ? { hospitalId } : {} }),
   getDoctors: (params?: Record<string, unknown>) => api.get('/doctors', { params }),
   getDoctorById: (id: string) => api.get(`/doctors/${id}`),
+};
+
+export const hospitalRegistrationApi = {
+  register: (data: ValidHospitalRegistration) => api.post('/hospitals/register', data),
+  verifyEmail: (data: { email: string; code: string }) => api.post('/hospitals/verify-email', data),
+  resendCode: (email: string) => api.post('/hospitals/resend-code', { email }),
 };
 
 // AI
@@ -138,6 +152,14 @@ export const adminApi = {
   getPriorityDistribution: () => api.get('/admin/priority-distribution'),
   getDepartmentPerformance: () => api.get('/admin/department-performance'),
   getUsers: (params?: Record<string, unknown>) => api.get('/admin/users', { params }),
+  // Team management
+  getTeam: (params?: Record<string, unknown>) => api.get('/team', { params }),
+  addTeamMember: (data: Record<string, unknown>) => api.post('/team', data),
+  inviteAdmin: (data: Record<string, unknown>) => api.post('/team/admins', data),
+  updateTeamMember: (id: string, data: Record<string, unknown>) => api.patch(`/team/${id}`, data),
+  removeTeamMember: (id: string, data?: Record<string, unknown>) => api.post(`/team/${id}/remove`, data),
+  reactivateTeamMember: (id: string) => api.post(`/team/${id}/reactivate`),
+  getAuditLog: (params?: Record<string, unknown>) => api.get('/admin/audit-log', { params }),
 };
 
 // Notifications

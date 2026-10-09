@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IPriorityAssessment extends Document {
   _id: mongoose.Types.ObjectId;
   appointmentId: mongoose.Types.ObjectId;
+  hospitalId?: mongoose.Types.ObjectId;
   inputData: {
     symptoms: string[];
     reason: string;
@@ -26,6 +27,7 @@ export interface IPriorityAssessment extends Document {
 const PriorityAssessmentSchema = new Schema<IPriorityAssessment>(
   {
     appointmentId: { type: Schema.Types.ObjectId, ref: 'Appointment' },
+    hospitalId: { type: Schema.Types.ObjectId, ref: 'Hospital' },
     inputData: {
       symptoms: [{ type: String }],
       reason: { type: String },
@@ -46,5 +48,7 @@ const PriorityAssessmentSchema = new Schema<IPriorityAssessment>(
   },
   { timestamps: true }
 );
+
+PriorityAssessmentSchema.index({ hospitalId: 1, createdAt: -1 });
 
 export const PriorityAssessment = mongoose.model<IPriorityAssessment>('PriorityAssessment', PriorityAssessmentSchema);

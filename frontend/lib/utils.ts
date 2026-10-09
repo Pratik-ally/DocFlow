@@ -5,7 +5,6 @@ import { format, formatDistanceToNow } from 'date-fns';
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
 export function formatDate(date: string | Date): string {
   return format(new Date(date), 'dd MMM yyyy');
 }
@@ -56,10 +55,3 @@ export function getStatusColor(status: string): string {
   };
   return map[status] || 'text-gray-600 bg-gray-50';
 }
-
-export const DEMO_ACCOUNTS = [
-  { role: 'Patient', email: 'patient@demo.com', password: 'Demo@123', icon: '👤' },
-  { role: 'Doctor', email: 'doctor@demo.com', password: 'Demo@123', icon: '👨‍⚕️' },
-  { role: 'Staff', email: 'staff@demo.com', password: 'Demo@123', icon: '🏥' },
-  { role: 'Admin', email: 'admin@demo.com', password: 'Demo@123', icon: '⚙️' },
-];

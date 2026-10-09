@@ -44,12 +44,20 @@ const adminNav: NavItem[] = [
   { label: 'Settings', href: '/admin/settings', icon: Settings },
 ];
 
+const ownerNav: NavItem[] = [
+  { label: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
+  { label: 'Analytics', href: '/admin/analytics', icon: BarChart2 },
+  { label: 'Team', href: '/admin/users', icon: Users },
+  { label: 'Settings', href: '/admin/settings', icon: Settings },
+];
+
 function getNav(role?: string) {
   switch (role) {
     case 'PATIENT': return patientNav;
     case 'DOCTOR': return doctorNav;
     case 'STAFF': return staffNav;
     case 'ADMIN': return adminNav;
+    case 'OWNER': return ownerNav;
     default: return [];
   }
 }
@@ -60,6 +68,7 @@ function getRoleLabel(role?: string) {
     DOCTOR: 'Doctor Portal',
     STAFF: 'Staff Portal',
     ADMIN: 'Admin Portal',
+    OWNER: 'Owner Portal',
   };
   return map[role || ''] || 'Portal';
 }

@@ -2,12 +2,13 @@ import { Response } from 'express';
 import { Appointment } from '../models/Appointment';
 import { Patient } from '../models/Patient';
 import { Doctor } from '../models/Doctor';
+import { User } from '../models/User';
 import { QueueEntry } from '../models/QueueEntry';
 import { Notification } from '../models/Notification';
 import { AuthRequest } from '../middleware/auth';
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { assessPriority } from '../ai/priorityEngine';
+import { assessPriorityForBooking } from '../ai/priorityEngine';
 
 const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine((value) => {
   const parsedDate = new Date(`${value}T00:00:00.000Z`);
@@ -76,7 +77,7 @@ export const getMyAppointments = async (req: AuthRequest, res: Response): Promis
 
     res.json({ success: true, appointments, total, page: +page, limit: +limit });
   } catch (error) {
-    console.error(error);
+    console.error('Appointment list failed:', error instanceof Error ? error.name : 'Unknown error');
     res.status(500).json({ success: false, message: 'Failed to fetch appointments' });
   }
 };
@@ -110,14 +111,20 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
       departmentId,
       hospitalId,
       isAvailable: true,
-    }).select('_id');
-    if (!doctor) {
+    }).select('_id userId');
+    const activeDoctor = doctor && await User.exists({
+      _id: doctor.userId,
+      hospitalId,
+      role: 'DOCTOR',
+      status: 'ACTIVE',
+    });
+    if (!doctor || !activeDoctor) {
       res.status(400).json({ success: false, message: 'Selected doctor is unavailable for this department or hospital' });
       return;
     }
 
     const appointmentDay = new Date(`${appointmentDate}T00:00:00.000Z`);
-    const assessment = assessPriority({
+    const assessment = assessPriorityForBooking({
       reason,
       symptoms: symptoms || [],
       urgencyLevel,
@@ -125,6 +132,7 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
 
     // Prevent double-booking: same doctor, same date, same time slot
     const existing = await Appointment.findOne({
+      hospitalId,
       doctorId,
       appointmentDate: appointmentDay,
       appointmentTime,
@@ -148,6 +156,7 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
       reason,
       symptoms: symptoms || [],
       priority: assessment.priority,
+      requiresHumanReview: assessment.requiresHumanReview,
       status: 'BOOKED',
     });
 
@@ -170,14 +179,30 @@ export const createAppointment = async (req: AuthRequest, res: Response): Promis
       res.status(409).json({ success: false, message: 'This time slot is already booked. Please select a different time.' });
       return;
     }
-    console.error(error);
+    console.error('Appointment creation failed:', error instanceof Error ? error.name : 'Unknown error');
     res.status(500).json({ success: false, message: 'Failed to create appointment' });
   }
 };
 
 export const getAppointmentById = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const appointment = await Appointment.findById(req.params.id)
+    const scope: Record<string, unknown> = { _id: req.params.id };
+    if (req.user?.role === 'PATIENT') {
+      const patient = await Patient.findOne({ userId: req.user.id }).select('_id');
+      if (!patient) {
+        res.status(404).json({ success: false, message: 'Appointment not found' });
+        return;
+      }
+      scope.patientId = patient._id;
+    } else {
+      if (!req.user?.hospitalId) {
+        res.status(403).json({ success: false, message: 'Insufficient permissions' });
+        return;
+      }
+      scope.hospitalId = req.user.hospitalId;
+    }
+
+    const appointment = await Appointment.findOne(scope)
       .populate({ path: 'doctorId', populate: { path: 'userId', select: 'name' } })
       .populate('departmentId', 'name')
       .populate('hospitalId', 'name')
@@ -195,7 +220,10 @@ export const getAppointmentById = async (req: AuthRequest, res: Response): Promi
         return;
       }
     } else if (req.user?.role === 'DOCTOR') {
-      const doctor = await Doctor.findOne({ userId: req.user.id }).select('_id');
+      const doctor = await Doctor.findOne({
+        userId: req.user.id,
+        hospitalId: req.user.hospitalId,
+      }).select('_id');
       if (!doctor || appointment.doctorId.toString() !== doctor._id.toString()) {
         res.status(403).json({ success: false, message: 'Not authorised to view this appointment' });
         return;
@@ -219,7 +247,32 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response): 
       return;
     }
 
-    const appointment = await Appointment.findById(req.params.id);
+    const scope: Record<string, unknown> = { _id: req.params.id };
+    if (req.user?.role === 'PATIENT') {
+      const patient = await Patient.findOne({ userId: req.user.id }).select('_id');
+      if (!patient) {
+        res.status(404).json({ success: false, message: 'Appointment not found' });
+        return;
+      }
+      scope.patientId = patient._id;
+    } else {
+      const hospitalId = req.user?.hospitalId;
+      if (!hospitalId) {
+        res.status(403).json({ success: false, message: 'Insufficient permissions' });
+        return;
+      }
+      scope.hospitalId = hospitalId;
+      if (req.user?.role === 'DOCTOR') {
+        const doctor = await Doctor.findOne({ userId: req.user.id, hospitalId }).select('_id');
+        if (!doctor) {
+          res.status(403).json({ success: false, message: 'Insufficient permissions' });
+          return;
+        }
+        scope.doctorId = doctor._id;
+      }
+    }
+
+    const appointment = await Appointment.findOne(scope);
     if (!appointment) {
       res.status(404).json({ success: false, message: 'Appointment not found' });
       return;
@@ -238,24 +291,23 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response): 
       }
     }
     if (req.user?.role === 'DOCTOR') {
-      const doctor = await Doctor.findOne({ userId: req.user.id }).select('_id');
-      if (!doctor || appointment.doctorId.toString() !== doctor._id.toString()) {
-        res.status(403).json({ success: false, message: 'Not authorised to update this appointment' });
-        return;
-      }
     }
 
-    await Appointment.findByIdAndUpdate(
-      req.params.id,
+    await Appointment.findOneAndUpdate(
+      { _id: req.params.id, hospitalId: appointment.hospitalId },
       { status, ...(notes && { notes }) },
       { new: true }
     );
 
     // Create queue entry if checking in
     if (status === 'CHECKED_IN') {
-      const existingEntry = await QueueEntry.findOne({ appointmentId: appointment._id });
+      const existingEntry = await QueueEntry.findOne({
+        appointmentId: appointment._id,
+        hospitalId: appointment.hospitalId,
+      });
       if (!existingEntry) {
         const count = await QueueEntry.countDocuments({
+          hospitalId: appointment.hospitalId,
           doctorId: appointment.doctorId,
           date: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) },
           status: { $in: ['WAITING', 'IN_CONSULTATION'] },
@@ -265,6 +317,7 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response): 
           patientId: appointment.patientId,
           doctorId: appointment.doctorId,
           departmentId: appointment.departmentId,
+          hospitalId: appointment.hospitalId,
           priority: appointment.priority,
           queuePosition: count + 1,
           estimatedWaitTime: (count + 1) * 15,
@@ -305,10 +358,15 @@ export const getAllAppointments = async (req: AuthRequest, res: Response): Promi
       return;
     }
 
-    const filter: Record<string, unknown> = {};
+    const hospitalId = req.user?.hospitalId;
+    if (!hospitalId) {
+      res.status(403).json({ success: false, message: 'Insufficient permissions' });
+      return;
+    }
+    const filter: Record<string, unknown> = { hospitalId };
 
     if (req.user?.role === 'DOCTOR') {
-      const doctor = await Doctor.findOne({ userId: req.user.id }).select('_id');
+      const doctor = await Doctor.findOne({ userId: req.user.id, hospitalId }).select('_id');
       if (!doctor) {
         res.status(404).json({ success: false, message: 'Doctor profile not found' });
         return;

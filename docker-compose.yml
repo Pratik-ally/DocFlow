@@ -9,6 +9,7 @@ services:
     volumes:
       - mongo_data:/data/db
       - ./docker/mongo-init.sh:/docker-entrypoint-initdb.d/01-create-app-user.sh:ro
+    command: ['mongod', '--replSet', 'rs0', '--bind_ip_all']
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in the root .env file}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in the root .env file}
@@ -19,7 +20,7 @@ services:
       test:
         [
           'CMD-SHELL',
-          'mongosh --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "db.adminCommand({ ping: 1 }).ok" --quiet',
+          'mongosh --username "$$MONGO_INITDB_ROOT_USERNAME" --password "$$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --eval "try { rs.status().ok } catch (e) { rs.initiate({ _id: ''rs0'', members: [{ _id: 0, host: ''mongodb:27017'' }] }).ok }" --quiet',
         ]
       interval: 10s
       timeout: 5s
@@ -33,12 +34,17 @@ services:
     ports:
       - '127.0.0.1:5000:5000'
     environment:
-      MONGODB_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/medipriority?authSource=medipriority
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/medipriority?authSource=medipriority&replicaSet=rs0
       SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in the root .env file}
       NODE_ENV: production
       PORT: 5000
       HOST: 0.0.0.0
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
     depends_on:
       mongodb:
         condition: service_healthy
@@ -54,7 +60,7 @@ services:
     ports:
       - '127.0.0.1:3000:3000'
     environment:
-      MONGODB_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/medipriority?authSource=medipriority
+      MONGODB_URI: mongodb://${MONGO_APP_USERNAME}:${MONGO_APP_PASSWORD}@mongodb:27017/medipriority?authSource=medipriority&replicaSet=rs0
       SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in the root .env file}
       AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in the root .env file}
       AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:-}

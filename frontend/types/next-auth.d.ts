@@ -9,6 +9,10 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       role: string;
+      hospitalId?: string;
+      mustChangePassword?: boolean;
+      portal?: string;
+      sessionVersion?: number;
     };
   }
 
@@ -16,6 +20,10 @@ declare module 'next-auth' {
     id?: string;
     role?: string;
     image?: string | null;
+    hospitalId?: string;
+    mustChangePassword?: boolean;
+    portal?: string;
+    sessionVersion?: number;
   }
 }
 
@@ -23,5 +31,9 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id?: string;
     role?: string;
+    hospitalId?: string;
+    mustChangePassword?: boolean;
+    portal?: string;
+    sessionVersion?: number;
   }
 }
